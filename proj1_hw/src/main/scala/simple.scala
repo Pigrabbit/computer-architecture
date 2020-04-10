@@ -29,8 +29,6 @@ class SimpleSystem extends Module {
 
   val adder1 = Module(new SimpleAdder)
   val adder2 = Module(new SimpleAdder)
-//  val reg1 = Reg(UInt(32.W))
-//  val reg2 = Reg(UInt(32.W))
   val reg1 = RegInit(1.U(32.W))
   val reg2 = RegInit(0.U(32.W))
   val m0 = Module(new Mux2)
