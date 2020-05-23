@@ -9,6 +9,7 @@
 *.sif
 *.xml
 *.hex
+*.zip
 
 /bin/
 target
