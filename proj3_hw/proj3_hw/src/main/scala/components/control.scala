@@ -39,10 +39,26 @@ class Control extends Module {
 
   val signals =
     ListLookup(io.opcode,
-      /*default*/           List(false.B, false.B, 3.U,   false.B, false.B,  false.B, false.B,    0.U,    0.U),
+      /*default*/             List(false.B, false.B, 3.U,   false.B, false.B,  false.B, false.B,    0.U,    0.U),
       Array(                 /*  branch,  memread, toreg, add,     memwrite, immediate, regwrite, alusrc1,  jump */
-      // R-format
-      BitPat("b0110011") -> List(false.B, false.B, 0.U,   false.B, false.B,  false.B, true.B,     0.U,    0.U),
+        // R-format
+        BitPat("b0110011") -> List(false.B, false.B, 0.U,   false.B, false.B,  false.B, true.B,     0.U,    0.U),
+        // I-format b0000011 : lb, lh, lw, lbu, lhu
+        BitPat("b0000011") -> List(false.B, true.B,  1.U,   true.B,  false.B,  true.B,  true.B,     0.U,    0.U),
+        // b0010011: addi, slli, slti, sltiu, xori, srli, srai, ori, andi
+        BitPat("b0010011") -> List(false.B, false.B, 0.U,   false.B, false.B,  true.B,  true.B,     0.U,    0.U),
+        // S-format b0100011 : sb, sh, sw
+        BitPat("b0100011") -> List(false.B, false.B, 3.U,   true.B,  true.B,   true.B,  false.B,    0.U,    0.U),
+        // U-format b0110111 : lui 
+        BitPat("b0110111") -> List(false.B, false.B, 0.U,   true.B,  false.B,  true.B,  true.B,     1.U,    0.U),
+        // b0010111 : auipc        
+        BitPat("b0010111") -> List(false.B, false.B, 0.U,   true.B,  false.B,  true.B,  true.B,     2.U,    0.U),
+        // SB       b1100011 : beq, bne, blt, bge, bltu, bgeu
+        BitPat("b1100011") -> List(true.B,  false.B, 0.U,   false.B, false.B,  false.B, false.B,    0.U,    0.U),
+        // UJ       b1101111 : jal
+        BitPat("b1101111") -> List(false.B, false.B, 2.U,   false.B, false.B,  false.B, true.B,     1.U,    2.U),
+        // b1100111: jalr
+        BitPat("b1100111") -> List(false.B, false.B, 2.U,   false.B, false.B,  true.B,  true.B,     0.U,    3.U)
       ) // Array
     ) // ListLookup
 

@@ -30,7 +30,7 @@ class ALUControl extends Module {
   io.operation := 15.U // invalid operation
 
   when (io.add) {
-    io.operation := "b0010".U
+    io.operation := "b0010".U // ld, sd
   } .otherwise {
     switch (io.funct3) {
       is ("b000".U) {
