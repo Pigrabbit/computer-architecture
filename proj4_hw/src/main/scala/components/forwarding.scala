@@ -37,23 +37,30 @@ class ForwardingUnit extends Module {
   })
 
   // set forward A
-  when (io.rs1 === io.exmemrd && io.exmemrw && io.exmemrd =/= 0.U) {
+  //when (io.rs1 === io.exmemrd && io.exmemrd =/= 0.U && io.exmemrw) {
     // get result from ex_mem stage
-	io.forwardA := 1.U
-  } .elsewhen (io.rs1 === io.memwbrd && io.memwbrw && io.memwbrd =/= 0.U) {
+	//io.forwardA := 1.U
+  //} .elsewhen (io.rs1 === io.memwbrd && io.memwbrd =/= 0.U && io.memwbrw) {
 	// get result from mem_wb stage
-	io.forwardA := 2.U
-  } .otherwise {
+	//io.forwardA := 2.U
+  //} .otherwise {
 	// no forwarding
-	io.forwardA := 0.U
-  }
+	//io.forwardA := 0.U
+  //}
   // set forward B
-
-  when (io.rs2 === io.exmemrd && io.exmemrw && io.exmemrd =/= 0.U) {
-	io.forwardB := 1.U
-  } .elsewhen (io.rs2 === io.memwbrd && io.memwbrw && io.memwbrd =/= 0.U) {
-	io.forwardB := 2.U
+  when (io.rs1 === io.exmemrd && io.exmemrd =/= 0.U && io.exmemrw) {
+    io.forwardA := 1.U
+  } .elsewhen (io.rs1 === io.memwbrd && io.memwbrd =/= 0.U && io.memwbrw) {
+    io.forwardA := 2.U
   } .otherwise {
-	io.forwardB := 0.U
+    io.forwardA := 0.U
+  }
+
+  when (io.rs2 === io.exmemrd && io.exmemrd =/= 0.U && io.exmemrw) {
+    io.forwardB := 1.U
+  } .elsewhen (io.rs2 === io.memwbrd && io.memwbrd =/= 0.U && io.memwbrw) {
+    io.forwardB := 2.U
+  } .otherwise {
+    io.forwardB := 0.U
   }
 }
