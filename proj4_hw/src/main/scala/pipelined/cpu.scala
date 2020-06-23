@@ -140,8 +140,7 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends Module {
   // forwarding.io := DontCare
 //  hazard.io := DontCare
 
-  printf("Cycle=%d ", cycleCount)
-
+  printf("Cycle=%d \n", cycleCount)
   // Forward declaration of wires that connect different stages
 
   // From memory back to fetch. Since we don't decide whether to take a branch or not until the memory stage.
@@ -172,9 +171,15 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends Module {
   pcPlusFour.io.inputy := 4.U
 
   // Fill the IF/ID register if we are not bubbling IF/ID
-  if_id.valid := !hazard.io.ifid_bubble 
+  // otherwise, leave the IF/ID register *unchanged*
 
-  when (if_id.valid) {
+  //if_id.instruction := io.imem.instruction
+  //if_id.pc          := pc
+  //if_id.pcplusfour  := pcPlusFour.io.result
+
+  //if_id.valid := !hazard.io.ifid_bubble 
+
+  when (!hazard.io.ifid_bubble) {
   	if_id.instruction := io.imem.instruction
   	if_id.pc          := pc
   	if_id.pcplusfour  := pcPlusFour.io.result
@@ -182,12 +187,15 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends Module {
   	if_id.instruction := if_id.instruction 
   	if_id.pc          := if_id.pc 
   	if_id.pcplusfour  := if_id.pcplusfour
-  } 	
-
-  // otherwise, leave the IF/ID register *unchanged*
-
+  }
 
   if_id.flush := hazard.io.ifid_flush
+
+  when (hazard.io.ifid_flush) {
+	if_id.instruction := 0.U
+	if_id.pc := 0.U
+	if_id.pcplusfour := 0.U		
+  }
 
   printf(p"IF/ID: $if_id\n")
 
@@ -249,6 +257,82 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends Module {
 
   id_ex.excontrol.flush := hazard.io.idex_bubble
 
+  when (hazard.io.idex_bubble) {
+	/*id_ex.pc := id_ex.pc
+	id_ex.pcplusfour := id_ex.pcplusfour
+	id_ex.readdata1 := id_ex.readdata1
+	id_ex.readdata2 := id_ex.readdata2
+	id_ex.imm := id_ex.imm
+	id_ex.funct7 := id_ex.funct7
+	id_ex.funct3 := id_ex.funct3
+	id_ex.writereg := id_ex.writereg
+	id_ex.rs1 := id_ex.rs1
+	id_ex.rs2 := id_ex.rs2
+*/
+
+	id_ex.excontrol.add := 0.U 
+	id_ex.excontrol.immediate := 0.U 
+	id_ex.excontrol.alusrc1 := 0.U 
+	id_ex.excontrol.branch := 0.U
+	id_ex.excontrol.jump := 0.U
+
+	id_ex.mcontrol.taken := 0.U 
+	id_ex.mcontrol.memread := 0.U 
+	id_ex.mcontrol.memwrite := 0.U 
+	id_ex.mcontrol.sext := 0.U 
+	id_ex.mcontrol.maskmode := 0.U 
+
+	id_ex.wbcontrol.memtoreg := 0.U 
+	id_ex.wbcontrol.regwrite := 0.U 
+/*
+	id_ex.excontrol.add := id_ex.excontrol.add
+	id_ex.excontrol.immediate := id_ex.excontrol.immediate 
+	id_ex.excontrol.alusrc1 := id_ex.excontrol.alusrc1 
+	id_ex.excontrol.branch := id_ex.excontrol.branch 
+	id_ex.excontrol.jump := id_ex.excontrol.jump 
+
+	id_ex.mcontrol.taken := id_ex.mcontrol.taken
+	id_ex.mcontrol.memread := id_ex.mcontrol.memread
+	id_ex.mcontrol.memwrite := id_ex.mcontrol.memwrite
+	id_ex.mcontrol.sext := id_ex.mcontrol.sext
+	id_ex.mcontrol.maskmode := id_ex.mcontrol.maskmode
+
+	id_ex.wbcontrol.memtoreg := id_ex.wbcontrol.memtoreg
+	id_ex.wbcontrol.regwrite := id_ex.wbcontrol.regwrite
+*/
+  }
+/* .otherwise {
+    // FIll the id_ex register
+    id_ex.pc := if_id.pc
+    id_ex.pcplusfour := if_id.pcplusfour
+    id_ex.readdata1 := registers.io.readdata1
+    id_ex.readdata2 := registers.io.readdata2
+    id_ex.imm := immGen.io.sextImm
+    id_ex.funct7 := if_id.instruction(31,25)
+    id_ex.funct3 := if_id.instruction(14,12)
+    id_ex.writereg := if_id.instruction(11,7)
+    id_ex.rs1 := rs1
+    id_ex.rs2 := rs2
+
+    // Set the execution control signals
+    id_ex.excontrol.add := control.io.add
+    id_ex.excontrol.immediate := control.io.immediate
+    id_ex.excontrol.alusrc1 := control.io.alusrc1
+    id_ex.excontrol.branch := control.io.branch
+    id_ex.excontrol.jump := control.io.jump
+
+    // Set the memory control signals
+    id_ex.mcontrol.taken := false.B
+    id_ex.mcontrol.memread := control.io.memread
+    id_ex.mcontrol.memwrite := control.io.memwrite
+    id_ex.mcontrol.maskmode := if_id.instruction(13,12)
+    id_ex.mcontrol.sext := ~if_id.instruction(14)
+
+    // Set the writeback control signals
+    id_ex.wbcontrol.memtoreg := control.io.toreg
+    id_ex.wbcontrol.regwrite := control.io.regwrite
+  }
+*/
   printf("DASM(%x)\n", if_id.instruction)
   printf(p"ID/EX: $id_ex\n")
 
@@ -345,6 +429,48 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends Module {
 
   ex_mem.mcontrol.flush := hazard.io.exmem_bubble
 
+  when (hazard.io.exmem_bubble) {
+	 /*ex_mem.pcplusfour := ex_mem.pcplusfour
+	 ex_mem.aluresult := ex_mem.aluresult
+	 ex_mem.nextpc := ex_mem.nextpc
+	 ex_mem.readdata2 := ex_mem.readdata2
+	 ex_mem.writereg := ex_mem.writereg
+*/
+	 ex_mem.mcontrol.taken := 0.U
+
+	 ex_mem.mcontrol.memread := 0.U
+	 ex_mem.mcontrol.memwrite := 0.U 
+	 ex_mem.mcontrol.sext := 0.U 
+	 ex_mem.mcontrol.maskmode := 0.U 	
+	
+	 ex_mem.wbcontrol.memtoreg := 0.U 
+	 ex_mem.wbcontrol.regwrite := 0.U
+/*
+	 ex_mem.mcontrol.memread := ex_mem.mcontrol.memread
+	 ex_mem.mcontrol.memwrite := ex_mem.mcontrol.memwrite
+	 ex_mem.mcontrol.sext := ex_mem.mcontrol.sext
+	 ex_mem.mcontrol.maskmode := ex_mem.mcontrol.maskmode	
+	
+	 ex_mem.wbcontrol.memtoreg := ex_mem.wbcontrol.memtoreg
+	 ex_mem.wbcontrol.regwrite := ex_mem.wbcontrol.regwrite
+*/
+  } 
+/*.otherwise {
+  	 ex_mem.pcplusfour := id_ex.pcplusfour
+     ex_mem.aluresult := alu.io.result
+  	 ex_mem.readdata2 := id_ex.readdata2
+  	 ex_mem.writereg := id_ex.writereg
+  
+  	 ex_mem.mcontrol.taken := id_ex.mcontrol.taken
+  	 ex_mem.mcontrol.memread := id_ex.mcontrol.memread
+  	 ex_mem.mcontrol.memwrite := id_ex.mcontrol.memwrite
+  	 ex_mem.mcontrol.sext := id_ex.mcontrol.sext
+  	 ex_mem.mcontrol.maskmode := id_ex.mcontrol.maskmode
+
+  	 ex_mem.wbcontrol.memtoreg := id_ex.wbcontrol.memtoreg
+  	 ex_mem.wbcontrol.regwrite := id_ex.wbcontrol.regwrite
+  }
+*/
   printf(p"EX/MEM: $ex_mem\n")
 
   /////////////////////////////////////////////////////////////////////////////
@@ -405,4 +531,23 @@ class PipelinedCPU(implicit val conf: CPUConfig) extends Module {
   forwarding.io.memwbrd := mem_wb.writereg
 
   printf("---------------------------------------------\n")
+
+  val structures = List(
+	(control, "control"),
+	(registers, "registers"),
+	(aluControl, "aluControl"),
+    (alu, "alu"),
+    (immGen, "immGen"),
+    (branchCtrl, "branchCtrl"),
+    (pcPlusFour, "pcPlusFour"),
+    (branchAdd, "branchAdd"),
+	(forwarding, "forwarding"),
+	(hazard, "hazard"),
+  )
+  printf(p"pc: ${pc}\n")
+  for (structure <- structures) {
+	printf(p"${structure._2}: ${structure._1.io}\n")	
+  }
+
+  printf("=============================================\n")
 }
